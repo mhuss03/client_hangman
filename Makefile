@@ -1,6 +1,6 @@
 CC = gcc
 
-SRC = src/main.c src/client.c src/display.c
+SRC = src/main.c src/client.c src/display.c src/hangman_utils.c
 EXEC = hangman_client
 
 OBJ = $(SRC:.c=.o)
