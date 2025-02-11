@@ -34,6 +34,7 @@ client order:
 #define MIN_USERNAME_LEN 3
 #define MAX_LIVES 8
 #define MAX_LETTERS 26
+#define SLEEP_TIME 1
 
 int word_len = 0;
 
@@ -49,6 +50,12 @@ typedef enum
     VALID_INPUT = 1,
     INVALID_INPUT = -1
 } Username_Status;
+
+typedef struct
+{
+    char username[MAX_USERNAME_LEN];
+    int score;
+} Leaderboard;
 
 int is_valid_username(char *username)
 {
@@ -93,7 +100,6 @@ int is_valid_guess(char letter, char already_guessed[], int size)
 
     for (int i = 0; i < size + 1; i++)
     {
-        printf("i: %d\n", i);
         if (letter == already_guessed[i])
         {
             printf("Invalid input. Please try again.\n");
@@ -101,6 +107,47 @@ int is_valid_guess(char letter, char already_guessed[], int size)
         }
     }
     return VALID_INPUT;
+}
+
+void display_word_progress(char letter_final_arr[], int word_len)
+{
+    for (int i = 0; i < word_len; i++)
+    {
+        if (letter_final_arr[i] != 0)
+            printf(" %c ", letter_final_arr[i]);
+        else
+            printf(" _ ");
+    }
+    printf("\n");
+}
+
+void display_guessed_letters(char guessed[], int len)
+{
+    printf("Gussed Letters: ");
+    for (int i = 0; i < len; i++)
+    {
+        printf(" %c ", guessed[i]);
+    }
+    printf("\n");
+}
+
+short calc_score(short word_len, short lives)
+{
+    return word_len + lives;
+}
+
+void display_leaderboard(char leaderboard[])
+{
+    printf("\t 🏆  Hangman Leaderboard 🏆\n");
+    char delim[] = ",";
+
+    char *tok = strtok(leaderboard, delim);
+
+    while (tok != NULL)
+    {
+        printf("%s\n", tok);
+        tok = strtok(NULL, delim);
+    }
 }
 
 int main(void)
@@ -122,7 +169,7 @@ int main(void)
 
     if (connect(sockfd, (struct sockaddr *)&server_addr, server_len) < 0)
     {
-        perror("Connection failed");
+        perror("❌ Connection failed");
         exit(EXIT_FAILURE);
     };
 
@@ -147,17 +194,17 @@ int main(void)
     n = send(sockfd, player.username, strlen(player.username) + 1, 0);
     if (n < 0)
     {
-        perror("Username Send failed");
+        perror("❌ Username Send failed");
         exit(1);
     }
 
-    printf("Waiting for other players to Register ...\n");
+    printf("⏳ Waiting for other players to Register ...\n");
 
     // 2. receive all players are ready
     n = recv(sockfd, buffer, sizeof(buffer), 0);
     if (n < 0)
     {
-        perror("Receive failed");
+        perror("❌ Receive failed");
         exit(1);
     }
 
@@ -177,18 +224,18 @@ int main(void)
     n = send(sockfd, &ready, 1, 0);
     if (n < 0)
     {
-        perror("r Send failed");
+        perror("❌ r Send failed");
         exit(1);
     }
 
-    printf("Waiting for other players to ready up ...\n");
+    printf("⏳ Waiting for other players to ready up ...\n");
 
     // 4. receive length of word
 
     n = recv(sockfd, &word_len, sizeof(word_len), 0);
     if (n < 0)
     {
-        perror("Receive failed");
+        perror("❌ Receive failed");
         exit(1);
     }
 
@@ -197,22 +244,27 @@ int main(void)
     // Guess Loop
     char guess;
     char already_guessed[MAX_LETTERS];
+    char incorrect_guess[MAX_LETTERS - word_len];
     int game_won;
 
     int temp_arr[word_len];
     memset(temp_arr, 0, sizeof(temp_arr));
 
     int final_arr[word_len];
+    char letter_final_arr[word_len];
     memset(final_arr, 0, sizeof(final_arr));
 
     while (1)
     {
-        printf("*********************\n");
+        system("clear");
+
         game_won = 1;
 
-        printf("Lives remaining: %d\t", player.lives);
-        printf("Guess Count: %d\n", player.num_guesses);
+        printf("❤️ Lives remaining: %d | 🎯 Guesses: %d\n", player.lives, player.num_guesses);
         Hungman(player.lives);
+        printf("\n🔷 Word Progress: ");
+        display_word_progress(letter_final_arr, word_len);
+        display_guessed_letters(already_guessed, player.num_guesses);
 
         do
         {
@@ -225,7 +277,7 @@ int main(void)
         n = send(sockfd, &guess, 1, 0);
         if (n < 0)
         {
-            perror("Guess Send failed");
+            perror("❌ Guess Send failed");
             exit(1);
         }
 
@@ -235,7 +287,7 @@ int main(void)
         n = recv(sockfd, temp_arr, sizeof(temp_arr), 0);
         if (n < 0)
         {
-            perror("Receive failed");
+            perror("❌ Receive failed");
             exit(1);
         }
 
@@ -246,24 +298,34 @@ int main(void)
             {
                 correct_guess = 1;
                 final_arr[i] = 1;
+                letter_final_arr[i] = guess;
+            }
+            else
+            {
+                incorrect_guess[i] = guess;
             }
         }
 
         if (!correct_guess)
         {
             player.lives--;
-            printf("Incorrect guess! You lost a life.\n");
+            printf("❌ Incorrect guess! You lost a life.\n");
         }
         else
         {
-            printf("Correct guess!\n");
+            printf("✅ Correct guess!\n");
         }
 
         player.num_guesses++;
 
         if (player.lives <= 0)
         {
+            sleep(SLEEP_TIME);
+            system("clear");
             Hungman(player.lives);
+            // printf("🔍 The Correct word was: ");
+            display_word_progress(letter_final_arr, word_len);
+
             break;
         }
 
@@ -278,7 +340,12 @@ int main(void)
 
         if (game_won == 1)
         {
-            printf("Congratulations, you have won the game!\n");
+            sleep(SLEEP_TIME);
+            system("clear");
+            printf("🎉 Congratulations, %s! You guessed the correct word! 🎉\n", player.username);
+            printf("🏆 The word was: ");
+            display_word_progress(letter_final_arr, word_len);
+            printf("📊 Game Stats: \n Guesses: %d\n Lives Remaining: %d\n", player.num_guesses, player.lives);
             break;
         }
 
@@ -288,7 +355,28 @@ int main(void)
         //     printf("%d,", final_arr[i]);
         // }
         // printf("\n");
+
+        sleep(SLEEP_TIME);
     }
+
+    short int final_score = calc_score((short)word_len, (short)player.lives);
+
+    n = send(sockfd, &final_score, sizeof(final_score), 0);
+    if (n < 0)
+    {
+        perror("❌ Send Score failed");
+        exit(1);
+    }
+
+    memset(&buffer, 0, MAX_BUFFER_SIZE);
+    n = recv(sockfd, buffer, sizeof(buffer), 0);
+    if (n < 0)
+    {
+        perror("❌ Receiving Leaderboard failed");
+        exit(1);
+    }
+
+    display_leaderboard(buffer);
 
     close(sockfd);
     return 0;

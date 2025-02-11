@@ -99,7 +99,7 @@ void Hungman(int lives)
         printf(" /|\\  |\n");
         printf(" / \\  |\n");
         printf("      |\n");
-        printf("GAME OVER!\n");
+        printf("💀 GAME OVER!\n");
         printf("=========\n");
 
         break;
