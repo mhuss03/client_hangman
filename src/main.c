@@ -359,6 +359,18 @@ int main(void)
         sleep(SLEEP_TIME);
     }
 
+    printf("Waiting for all players to finish...\n");
+
+    memset(&buffer, 0, MAX_BUFFER_SIZE);
+    n = recv(sockfd, buffer, sizeof(buffer), 0);
+    if (n < 0)
+    {
+        perror("❌ Receive failed");
+        exit(1);
+    }
+
+    printf("Server response: %s\n", buffer);
+
     short int final_score = calc_score((short)word_len, (short)player.lives);
 
     n = send(sockfd, &final_score, sizeof(final_score), 0);
