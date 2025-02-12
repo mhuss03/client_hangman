@@ -253,6 +253,7 @@ int main(void)
     int final_arr[word_len];
     char letter_final_arr[word_len];
     memset(final_arr, 0, sizeof(final_arr));
+    memset(letter_final_arr, 0, sizeof(letter_final_arr));
 
     while (1)
     {
