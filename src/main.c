@@ -35,8 +35,9 @@ client order:
 #define MAX_LIVES 8
 #define MAX_LETTERS 26
 #define SLEEP_TIME 1
+#define MAX_PLAYERS 2
 
-int word_len = 0;
+int word_len = 1;
 
 typedef struct
 {
@@ -55,7 +56,7 @@ typedef struct
 {
     char username[MAX_USERNAME_LEN];
     int score;
-} Leaderboard;
+} User_Leaderboard;
 
 int is_valid_username(char *username)
 {
@@ -136,18 +137,83 @@ short calc_score(short word_len, short lives)
     return word_len + lives;
 }
 
-void display_leaderboard(char leaderboard[])
+int calc_player_count(char input_str[])
 {
-    printf("\t 🏆  Hangman Leaderboard 🏆\n");
+    char *temp = malloc(strlen(input_str) + 1);
+    strcpy(temp, input_str);
+    int player_count = 0;
+
+    temp = strtok(temp, ",");
+    while (temp != NULL)
+    {
+        player_count++;
+        temp = strtok(NULL, ",");
+    }
+
+    free(temp);
+    return player_count;
+}
+
+void display_leaderboard(char str_leaderboard[])
+{
     char delim[] = ",";
 
-    char *tok = strtok(leaderboard, delim);
+    int player_count = calc_player_count(str_leaderboard);
 
-    while (tok != NULL)
+    str_leaderboard[strlen(str_leaderboard) - 1] = '\0';
+    User_Leaderboard user_leaderboard[player_count];
+    char *entry = strtok(str_leaderboard, delim);
+    // static ref in strtok
+
+    int rank = 1;
+    int i = 0;
+
+    printf("\n\t 🏆  Hangman Leaderboard 🏆\n");
+    printf("\t-----------------------------\n");
+    printf("\t| %-3s | %-10s | %-5s |\n", "#", "Username", "Score");
+    printf("\t-----------------------------\n");
+
+    // "a:10,b:40,"
+
+    while (entry != NULL)
     {
-        printf("%s\n", tok);
-        tok = strtok(NULL, delim);
+        // printf("%s ", tok);
+        char *colon = strchr(entry, ':');
+        if (colon != NULL)
+        {
+            *colon = '\0';
+            char *username = entry;
+            char *score = colon + 1;
+
+            strcpy(user_leaderboard[i].username, username);
+            user_leaderboard[i].score = atoi(score);
+            i++;
+        }
+        entry = strtok(NULL, delim);
     }
+
+    User_Leaderboard temp_user;
+
+    for (int i = 0; i < player_count - 1; i++)
+    {
+        for (int j = 0; j < player_count - i - 1; j++)
+        {
+            if (user_leaderboard[j].score < user_leaderboard[j + 1].score)
+            {
+                temp_user = user_leaderboard[j];
+                user_leaderboard[j] = user_leaderboard[j + 1];
+                user_leaderboard[j + 1] = temp_user;
+            }
+        }
+    }
+
+    for (int i = 0; i < player_count; i++)
+    {
+        printf("\t| %-3d | %-10s | %-5d |\n", rank, user_leaderboard[i].username, user_leaderboard[i].score);
+        rank++;
+    }
+
+    printf("\t-----------------------------\n\n");
 }
 
 int main(void)
@@ -242,18 +308,19 @@ int main(void)
     // 5. send guess
     // 6. recieve results of guess
     // Guess Loop
-    char guess;
-    char already_guessed[MAX_LETTERS];
+    char guess = '\0';
+    char already_guessed[MAX_LETTERS] = {'\0'};
     char incorrect_guess[MAX_LETTERS - word_len];
-    int game_won;
+    int game_won = 0;
+    // c11
 
     int temp_arr[word_len];
-    memset(temp_arr, 0, sizeof(temp_arr));
+    memset(&temp_arr, 0, sizeof(temp_arr));
 
     int final_arr[word_len];
     char letter_final_arr[word_len];
-    memset(final_arr, 0, sizeof(final_arr));
-    memset(letter_final_arr, 0, sizeof(letter_final_arr));
+    memset(&final_arr, 0, sizeof(final_arr));
+    memset(&letter_final_arr, 0, sizeof(letter_final_arr));
 
     while (1)
     {
@@ -389,6 +456,7 @@ int main(void)
         exit(1);
     }
 
+    // printf("Buffer: %s\n", buffer);
     display_leaderboard(buffer);
 
     close(sockfd);
