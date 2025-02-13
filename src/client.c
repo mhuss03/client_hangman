@@ -36,7 +36,25 @@ int connect_to_server()
 void handle_gameplay(int sockfd, User *player)
 {
     char buffer[MAX_BUFFER_SIZE];
+    int joining_check = 0;
     int n;
+
+    n = recv(sockfd, &joining_check, sizeof(buffer), 0);
+    if (n < 0)
+    {
+        perror("❌ Receive failed");
+        exit(1);
+    }
+
+    if (joining_check == -1)
+    {
+        printf("Server is full\n");
+        exit(1);
+    }
+
+    printf("Welcome to Hangman!: \n\n");
+
+    memset(&buffer, 0, sizeof(buffer));
 
     // 1. Send username
     get_user_username(player->username, MAX_USERNAME_LEN);
